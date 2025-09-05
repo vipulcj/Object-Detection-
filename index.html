@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIFAR-10 Object Prediction</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .upload-container {
+            transition: all 0.3s ease;
+        }
+        .upload-container:hover {
+            transform: scale(1.02);
+        }
+        #spinner {
+            display: none;
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #09f;
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .tab-button {
+            transition: all 0.2s ease-in-out;
+        }
+        .tab-button.active {
+            border-color: #3b82f6;
+            color: #3b82f6;
+            background-color: #eff6ff;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <div class="container mx-auto p-4 sm:p-8 max-w-2xl">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-900">CIFAR-10 Object Predictor</h1>
+            <p class="text-lg text-gray-600 mt-2">Provide an image by uploading or from a URL to see the model's prediction.</p>
+        </header>
+
+        <main>
+            <div class="bg-white rounded-xl shadow-lg p-6 sm:p-8 upload-container">
+                <!-- Tabs for switching between upload and URL -->
+                <div class="flex border-b mb-6">
+                    <button id="upload-tab" class="tab-button active flex-1 py-2 text-center font-semibold border-b-2">Upload Image</button>
+                    <button id="url-tab" class="tab-button flex-1 py-2 text-center font-semibold border-b-2">Use Image URL</button>
+                </div>
+
+                <!-- File Upload Section -->
+                <div id="upload-section">
+                    <form id="upload-form" enctype="multipart/form-data">
+                        <label for="image-upload" class="cursor-pointer">
+                            <div id="image-preview-container" class="border-2 border-dashed border-gray-300 rounded-lg text-center p-10 hover:border-blue-500 transition">
+                                <img id="image-preview" src="" alt="Image Preview" class="hidden max-h-64 mx-auto rounded-lg"/>
+                                <div id="upload-prompt">
+                                    <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                    <p class="mt-2 text-sm text-gray-600">
+                                        <span class="font-semibold text-blue-600">Click to upload</span> or drag and drop
+                                    </p>
+                                    <p class="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                                </div>
+                            </div>
+                        </label>
+                        <input id="image-upload" name="file" type="file" class="hidden" accept="image/*">
+                    </form>
+                </div>
+
+                <!-- URL Input Section -->
+                <div id="url-section" class="hidden">
+                    <label for="image-url" class="block text-sm font-medium text-gray-700">Image URL</label>
+                    <input type="text" id="image-url" placeholder="https://example.com/image.jpg" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <img id="url-image-preview" src="" alt="URL Image Preview" class="hidden max-h-64 mx-auto rounded-lg mt-4"/>
+                </div>
+                
+                <div class="text-center mt-6">
+                    <button id="predict-button" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400" disabled>
+                        Predict
+                    </button>
+                </div>
+            </div>
+
+            <div id="result-container" class="text-center mt-8 bg-white rounded-xl shadow-lg p-6 hidden">
+                <div id="spinner" class="mx-auto mb-4"></div>
+                <h2 class="text-2xl font-semibold text-gray-800">Prediction Result</h2>
+                <p id="prediction-text" class="text-xl text-blue-600 mt-2 font-bold"></p>
+                <div id="error-message" class="text-red-500 mt-2"></div>
+            </div>
+             <div class="text-center mt-6 text-gray-500 text-sm">
+                <p>Supported classes: airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck.</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // DOM Elements
+        const uploadTab = document.getElementById('upload-tab');
+        const urlTab = document.getElementById('url-tab');
+        const uploadSection = document.getElementById('upload-section');
+        const urlSection = document.getElementById('url-section');
+        
+        const uploadForm = document.getElementById('upload-form');
+        const imageUpload = document.getElementById('image-upload');
+        const imagePreview = document.getElementById('image-preview');
+        const imagePreviewContainer = document.getElementById('image-preview-container');
+        const uploadPrompt = document.getElementById('upload-prompt');
+        
+        const imageUrlInput = document.getElementById('image-url');
+        const urlImagePreview = document.getElementById('url-image-preview');
+
+        const predictButton = document.getElementById('predict-button');
+        const resultContainer = document.getElementById('result-container');
+        const predictionText = document.getElementById('prediction-text');
+        const errorMessage = document.getElementById('error-message');
+        const spinner = document.getElementById('spinner');
+
+        let currentMode = 'upload'; // 'upload' or 'url'
+
+        // --- Tab Switching Logic ---
+        uploadTab.addEventListener('click', () => switchTab('upload'));
+        urlTab.addEventListener('click', () => switchTab('url'));
+
+        function switchTab(mode) {
+            currentMode = mode;
+            if (mode === 'upload') {
+                uploadTab.classList.add('active');
+                urlTab.classList.remove('active');
+                uploadSection.classList.remove('hidden');
+                urlSection.classList.add('hidden');
+            } else {
+                urlTab.classList.add('active');
+                uploadTab.classList.remove('active');
+                urlSection.classList.remove('hidden');
+                uploadSection.classList.add('hidden');
+            }
+            validateInput();
+        }
+
+        // --- Input Handling ---
+        function validateInput() {
+            const isFileSelected = imageUpload.files.length > 0;
+            const isUrlEntered = imageUrlInput.value.trim() !== '';
+            predictButton.disabled = !( (currentMode === 'upload' && isFileSelected) || (currentMode === 'url' && isUrlEntered) );
+        }
+
+        // File upload listeners
+        imageUpload.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.src = e.target.result;
+                    imagePreview.classList.remove('hidden');
+                    uploadPrompt.classList.add('hidden');
+                    urlImagePreview.classList.add('hidden');
+                    urlImagePreview.src = '';
+                }
+                reader.readAsDataURL(file);
+            }
+            validateInput();
+        });
+
+        // Drag and drop listeners
+        ['dragover', 'dragleave', 'drop'].forEach(eventName => {
+            imagePreviewContainer.addEventListener(eventName, e => e.preventDefault());
+        });
+        imagePreviewContainer.addEventListener('dragover', () => imagePreviewContainer.classList.add('border-blue-500'));
+        imagePreviewContainer.addEventListener('dragleave', () => imagePreviewContainer.classList.remove('border-blue-500'));
+        imagePreviewContainer.addEventListener('drop', event => {
+            imagePreviewContainer.classList.remove('border-blue-500');
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                imageUpload.files = files;
+                imageUpload.dispatchEvent(new Event('change'));
+            }
+        });
+
+        // URL input listener
+        imageUrlInput.addEventListener('input', () => {
+            const url = imageUrlInput.value.trim();
+            if (url) {
+                urlImagePreview.src = url;
+                urlImagePreview.classList.remove('hidden');
+                imagePreview.classList.add('hidden');
+                imagePreview.src = '';
+                imageUpload.value = ''; // Clear file input
+            } else {
+                 urlImagePreview.classList.add('hidden');
+                 urlImagePreview.src = '';
+            }
+            validateInput();
+        });
+
+
+        // --- Prediction Logic ---
+        predictButton.addEventListener('click', async function() {
+            // Reset UI
+            spinner.style.display = 'block';
+            resultContainer.classList.remove('hidden');
+            predictionText.textContent = '';
+            errorMessage.textContent = '';
+
+            let fetchOptions;
+
+            if (currentMode === 'upload') {
+                const formData = new FormData(uploadForm);
+                fetchOptions = {
+                    method: 'POST',
+                    body: formData,
+                    // No 'Content-Type' header, browser sets it for multipart/form-data
+                };
+            } else {
+                fetchOptions = {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: imageUrlInput.value.trim() }),
+                };
+            }
+            
+            try {
+                const response = await fetch('/predict', fetchOptions);
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: `HTTP error! Status: ${response.status}` }));
+                    throw new Error(errorData.error);
+                }
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                predictionText.textContent = `${data.prediction}`;
+
+            } catch (error) {
+                console.error('Prediction error:', error);
+                errorMessage.textContent = `Error: ${error.message}`;
+            } finally {
+                spinner.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
