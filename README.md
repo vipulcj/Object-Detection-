@@ -25,8 +25,8 @@ It provides:
 ├── app.py                  # Flask backend
 ├── index.html              # Frontend interface
 ├── requirements.txt        # Dependencies
-├── README.md               # Documentation
-└── .gitignore              # Ignore unnecessary files
+└── README.md               # Documentation
+
 ```
 
 ---
