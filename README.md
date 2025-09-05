@@ -35,8 +35,8 @@ It provides:
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/<your-username>/<your-repo>.git
-cd <your-repo>
+git clone https://github.com/vipulcj/Object-Detection-.git
+cd <Object-Detection>
 ```
 
 ### 2. Create & activate virtual environment
@@ -65,7 +65,7 @@ The Flask app expects a trained model file:
 - `my_cnn_model.h5`  
 You can either:
 - Train it yourself using the provided notebook (`CIFAR10_project.ipynb`)  
-- Or i have provided me pretrained model in this repo. 
+- Or i have provided my my_cnn_model.h5 model in this repo. 
 
 
 ---
